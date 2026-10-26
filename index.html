@@ -43,17 +43,18 @@
     padding: .9rem clamp(1rem, 4vw, 2.5rem);
     border-bottom: 1px solid #555;
   }
-  .brand { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .01em; }
+  .brand { margin: 0; font-size: 1.15rem; font-weight: 700; }
   .brand small { display: block; font-weight: 400; font-size: .8rem; color: #b9b4a9; }
   .session { display: flex; align-items: center; gap: .9rem; font-size: .9rem; color: #cfcac0; }
 
   /* ---------- boxed card (matches the report screenshots) ---------- */
-  .card { background: #fff; border: 1px solid #000; padding: 5px; color: var(--ink); }
+  .screen { display: grid; place-items: start center; padding: clamp(1.5rem, 6vh, 3.5rem) 1rem 3rem; }
+  .card { width: min(460px, 100%); background: #fff; border: 1px solid #000; padding: 5px; color: var(--ink); }
+  .card.wide { width: min(1040px, 100%); }
   .card > .inner {
     background: var(--paper);
     border: 4px solid var(--tan);
     padding: 1rem 1.25rem 1.25rem;
-    height: 100%;
   }
   .card h2 {
     margin: 0 0 1rem;
@@ -63,25 +64,11 @@
     border: 1px solid var(--line);
     background: var(--blue);
   }
+  .card h2:focus { outline: none; }
   .card.pink h2   { background: var(--pink); }
   .card.green h2  { background: var(--green); }
   .card.yellow h2 { background: var(--yellow); }
   .card h3 { margin: 1rem 0 .5rem; font-size: .95rem; }
-
-  /* ---------- layout ---------- */
-  .login-wrap { display: grid; place-items: center; padding: clamp(2rem, 10vh, 6rem) 1rem; }
-  .login-wrap .card { width: min(440px, 100%); }
-  .app {
-    display: grid;
-    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
-    gap: 1.5rem;
-    max-width: 1140px;
-    margin: 0 auto;
-    padding: 1.5rem clamp(1rem, 4vw, 2rem) 3rem;
-  }
-  .span-all { grid-column: 1 / -1; }
-  .stack { display: grid; gap: 1.5rem; align-content: start; }
-  @media (max-width: 820px) { .app { grid-template-columns: minmax(0, 1fr); } }
 
   /* ---------- forms ---------- */
   .field { display: grid; grid-template-columns: 9.5rem 1fr; align-items: center; gap: .4rem .9rem; margin-bottom: .8rem; }
@@ -115,6 +102,10 @@
   button.quiet:hover { background: #444; }
   :focus-visible { outline: 3px solid #0b57d0; outline-offset: 2px; }
   .topbar :focus-visible { outline-color: #8dc2ff; }
+
+  /* ---------- main menu ---------- */
+  .menu { display: grid; gap: .9rem; padding: .6rem 1.2rem .4rem; }
+  .menu button { width: 100%; padding: .7rem 1rem; text-align: center; }
 
   /* ---------- feedback ---------- */
   .feedback:empty { display: none; }
@@ -176,19 +167,27 @@
 </head>
 <body>
 
+<header class="topbar" id="topbar" hidden>
+  <h1 class="brand">Smart Parking Management System<small>Admin console</small></h1>
+  <div class="session">
+    <span>Signed in as admin</span>
+    <button type="button" class="quiet" id="logoutTop">Log out</button>
+  </div>
+</header>
+
 <!-- ============ SCREEN 1 : ADMIN LOGIN ============ -->
-<main id="loginView" class="login-wrap">
+<main class="screen" id="loginView">
   <section class="card pink" aria-labelledby="loginTitle">
     <div class="inner">
-      <h2 id="loginTitle">Admin Login</h2>
+      <h2 id="loginTitle" tabindex="-1">Admin Login</h2>
       <form id="loginForm" autocomplete="off" novalidate>
         <div class="field">
           <label for="username">Username</label>
-          <input id="username" name="username" type="text" autocomplete="username">
+          <input id="username" type="text" autocomplete="username">
         </div>
         <div class="field">
           <label for="password">Password</label>
-          <input id="password" name="password" type="password" autocomplete="current-password">
+          <input id="password" type="password" autocomplete="current-password">
         </div>
         <div class="actions">
           <button type="submit">Login</button>
@@ -200,96 +199,112 @@
   </section>
 </main>
 
-<!-- ============ DASHBOARD ============ -->
-<div id="appView" hidden>
-  <header class="topbar">
-    <h1 class="brand">Smart Parking Management System<small>Admin console</small></h1>
-    <div class="session">
-      <span>Signed in as admin</span>
-      <button type="button" class="quiet" id="logoutBtn">Log out</button>
+<!-- ============ SCREEN 2 : MAIN MENU ============ -->
+<main class="screen" id="menuView" hidden>
+  <section class="card green" aria-labelledby="menuTitle">
+    <div class="inner">
+      <h2 id="menuTitle" tabindex="-1">Main Menu</h2>
+      <nav class="menu" aria-label="Main menu">
+        <button type="button" data-go="entryView">Vehicle Entry</button>
+        <button type="button" data-go="exitView">Vehicle Exit</button>
+        <button type="button" data-go="recordsView">View Parking Records</button>
+        <button type="button" data-go="slotsView">Available Slot Display</button>
+        <button type="button" id="exitSystem">Exit System</button>
+      </nav>
     </div>
-  </header>
+  </section>
+</main>
 
-  <main class="app">
-    <!-- Available slots -->
-    <section class="card green" aria-labelledby="slotsTitle">
-      <div class="inner">
-        <h2 id="slotsTitle">Available Slots</h2>
-        <p class="summary" id="slotSummary" aria-live="polite"></p>
-        <h3>Car bays</h3>
-        <div class="bays" id="carBays"></div>
-        <h3>Bike bays</h3>
-        <div class="bays" id="bikeBays"></div>
-      </div>
-    </section>
-
-    <div class="stack">
-      <!-- Vehicle entry -->
-      <section class="card" aria-labelledby="entryTitle">
-        <div class="inner">
-          <h2 id="entryTitle">Vehicle Entry</h2>
-          <form id="entryForm" autocomplete="off" novalidate>
-            <div class="field">
-              <label for="vType">Vehicle Type</label>
-              <select id="vType">
-                <option>Car</option>
-                <option>Bike</option>
-              </select>
-            </div>
-            <div class="field">
-              <label for="vNumber">Vehicle Number</label>
-              <input id="vNumber" type="text" placeholder="e.g. KL 09 AB 1234">
-            </div>
-            <div class="field">
-              <label for="vOwner">Owner Name</label>
-              <input id="vOwner" type="text">
-            </div>
-            <div class="actions">
-              <button type="submit">Save</button>
-              <button type="reset" id="entryClear">Clear</button>
-            </div>
-            <div class="feedback" id="entryMsg" aria-live="polite"></div>
-          </form>
+<!-- ============ SCREEN 3 : VEHICLE ENTRY ============ -->
+<main class="screen" id="entryView" hidden>
+  <section class="card" aria-labelledby="entryTitle">
+    <div class="inner">
+      <h2 id="entryTitle" tabindex="-1">Vehicle Entry</h2>
+      <form id="entryForm" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="vType">Vehicle Type</label>
+          <select id="vType">
+            <option>Car</option>
+            <option>Bike</option>
+          </select>
         </div>
-      </section>
-
-      <!-- Vehicle exit -->
-      <section class="card yellow" aria-labelledby="exitTitle">
-        <div class="inner">
-          <h2 id="exitTitle">Vehicle Exit</h2>
-          <form id="exitForm" autocomplete="off" novalidate>
-            <div class="field">
-              <label for="exitNumber">Vehicle Number</label>
-              <input id="exitNumber" type="text">
-            </div>
-            <div class="actions">
-              <button type="submit">Confirm exit</button>
-            </div>
-            <div class="feedback" id="exitMsg" aria-live="polite"></div>
-          </form>
+        <div class="field">
+          <label for="vNumber">Vehicle Number</label>
+          <input id="vNumber" type="text" placeholder="e.g. KL 09 AB 1234">
         </div>
-      </section>
+        <div class="field">
+          <label for="vOwner">Owner Name</label>
+          <input id="vOwner" type="text">
+        </div>
+        <div class="actions">
+          <button type="submit">Save</button>
+          <button type="button" data-go="menuView">Back to menu</button>
+        </div>
+        <div class="feedback" id="entryMsg" aria-live="polite"></div>
+      </form>
     </div>
+  </section>
+</main>
 
-    <!-- Records -->
-    <section class="card green span-all" aria-labelledby="recordsTitle">
-      <div class="inner">
-        <h2 id="recordsTitle">Parking Records</h2>
-        <div class="table-scroll">
-          <table>
-            <thead>
-              <tr>
-                <th>Ticket</th><th>Vehicle No</th><th>Type</th><th>Owner</th>
-                <th>Bay</th><th>Entry time</th><th>Exit time</th><th>Fee (Rs)</th><th>Status</th>
-              </tr>
-            </thead>
-            <tbody id="recordsBody"></tbody>
-          </table>
+<!-- ============ SCREEN 4 : VEHICLE EXIT ============ -->
+<main class="screen" id="exitView" hidden>
+  <section class="card yellow" aria-labelledby="exitTitle">
+    <div class="inner">
+      <h2 id="exitTitle" tabindex="-1">Vehicle Exit</h2>
+      <form id="exitForm" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="exitNumber">Vehicle Number</label>
+          <input id="exitNumber" type="text">
         </div>
+        <div class="actions">
+          <button type="submit">Confirm exit</button>
+          <button type="button" data-go="menuView">Back to menu</button>
+        </div>
+        <div class="feedback" id="exitMsg" aria-live="polite"></div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<!-- ============ SCREEN 5 : PARKING RECORDS ============ -->
+<main class="screen" id="recordsView" hidden>
+  <section class="card wide green" aria-labelledby="recordsTitle">
+    <div class="inner">
+      <h2 id="recordsTitle" tabindex="-1">Parking Records</h2>
+      <div class="table-scroll">
+        <table>
+          <thead>
+            <tr>
+              <th>Ticket</th><th>Vehicle No</th><th>Type</th><th>Owner</th>
+              <th>Bay</th><th>Entry time</th><th>Exit time</th><th>Fee (Rs)</th><th>Status</th>
+            </tr>
+          </thead>
+          <tbody id="recordsBody"></tbody>
+        </table>
       </div>
-    </section>
-  </main>
-</div>
+      <div class="actions">
+        <button type="button" data-go="menuView">Back to menu</button>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ============ SCREEN 6 : AVAILABLE SLOTS ============ -->
+<main class="screen" id="slotsView" hidden>
+  <section class="card green" aria-labelledby="slotsTitle">
+    <div class="inner">
+      <h2 id="slotsTitle" tabindex="-1">Available Slots</h2>
+      <p class="summary" id="slotSummary"></p>
+      <h3>Car bays</h3>
+      <div class="bays" id="carBays"></div>
+      <h3>Bike bays</h3>
+      <div class="bays" id="bikeBays"></div>
+      <div class="actions">
+        <button type="button" data-go="menuView">Back to menu</button>
+      </div>
+    </div>
+  </section>
+</main>
 
 <script>
 /* ============================================================
@@ -391,7 +406,7 @@ class Admin {
 }
 
 /* ============================================================
-   UI
+   UI : one screen at a time, driven by the Main Menu
    ============================================================ */
 const admin = new Admin("admin", "admin123");
 const manager = new ParkingManager(3, 3);   // 3 car bays, 3 bike bays
@@ -400,10 +415,30 @@ const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
 const fmt = d => d.toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit", second:"2-digit" });
 const normalise = s => s.trim().replace(/\s+/g, " ").toUpperCase();
+const showMessage = (el, kind, html) => { el.innerHTML = `<div class="msg ${kind}">${html}</div>`; };
 
-function showMessage(el, kind, html) {
-  el.innerHTML = `<div class="msg ${kind}">${html}</div>`;
+const SCREENS = ["loginView", "menuView", "entryView", "exitView", "recordsView", "slotsView"];
+
+function show(name) {
+  SCREENS.forEach(id => { $(id).hidden = (id !== name); });
+  $("topbar").hidden = (name === "loginView");
+
+  if (name === "recordsView") renderRecords();
+  if (name === "slotsView")   renderSlots();
+  if (name !== "entryView") $("entryMsg").innerHTML = "";
+  if (name !== "exitView")  $("exitMsg").innerHTML = "";
+
+  // move focus to the first field, or to the screen title
+  const first = { loginView: "username", entryView: "vNumber", exitView: "exitNumber" }[name];
+  const target = $(first || $(name).querySelector("h2").id);
+  target.focus();
+  window.scrollTo(0, 0);
 }
+
+// every button with data-go jumps to that screen
+document.querySelectorAll("[data-go]").forEach(btn => {
+  btn.addEventListener("click", () => show(btn.dataset.go));
+});
 
 /* ---------- login / logout ---------- */
 $("loginForm").addEventListener("submit", e => {
@@ -411,10 +446,7 @@ $("loginForm").addEventListener("submit", e => {
   if (admin.login($("username").value.trim(), $("password").value)) {
     $("loginMsg").innerHTML = "";
     $("loginForm").reset();
-    $("loginView").hidden = true;
-    $("appView").hidden = false;
-    render();
-    $("vNumber").focus();
+    show("menuView");
   } else {
     showMessage($("loginMsg"), "error", "Wrong username or password. Check both and try again.");
     $("password").value = "";
@@ -423,12 +455,12 @@ $("loginForm").addEventListener("submit", e => {
 });
 $("loginClear").addEventListener("click", () => { $("loginMsg").innerHTML = ""; });
 
-$("logoutBtn").addEventListener("click", () => {
-  $("appView").hidden = true;
-  $("loginView").hidden = false;
-  ["entryMsg", "exitMsg"].forEach(id => $(id).innerHTML = "");
-  $("username").focus();
-});
+function logout() {
+  show("loginView");
+  showMessage($("loginMsg"), "ok", "You are logged out. Thank you for using the Smart Parking Management System.");
+}
+$("exitSystem").addEventListener("click", logout);
+$("logoutTop").addEventListener("click", logout);
 
 /* ---------- vehicle entry ---------- */
 $("entryForm").addEventListener("submit", e => {
@@ -452,14 +484,13 @@ $("entryForm").addEventListener("submit", e => {
       + `Owner       : ${esc(t.vehicle.owner)}\n`
       + `Bay         : ${t.slot.id}\n`
       + `Entry time  : ${fmt(t.entryTime)}</pre>`;
-    $("entryForm").reset();
-    render();
+    $("vNumber").value = "";
+    $("vOwner").value = "";
     $("vNumber").focus();
   } catch (err) {
     showMessage(out, "error", esc(err.message));
   }
 });
-$("entryClear").addEventListener("click", () => { $("entryMsg").innerHTML = ""; });
 
 /* ---------- vehicle exit ---------- */
 $("exitForm").addEventListener("submit", e => {
@@ -474,8 +505,7 @@ $("exitForm").addEventListener("submit", e => {
     const t = manager.vehicleExit(number);
     showMessage(out, "ok",
       `<b>${esc(number)}</b> has left. Bay ${t.slot.id} is free again.<br>Fee to pay: <b>Rs. ${t.fee}</b>`);
-    $("exitForm").reset();
-    render();
+    $("exitNumber").value = "";
   } catch (err) {
     showMessage(out, "error", esc(err.message));
   }
@@ -491,20 +521,21 @@ function bayHTML(slot) {
     </div>`;
 }
 
-function render() {
+function renderSlots() {
   const car = manager.slots.filter(s => s.allowedType === "Car");
   const bike = manager.slots.filter(s => s.allowedType === "Bike");
   $("carBays").innerHTML = car.map(bayHTML).join("");
   $("bikeBays").innerHTML = bike.map(bayHTML).join("");
-
   const free = manager.slots.filter(s => s.available).length;
   $("slotSummary").textContent = free === 0
     ? "Parking is full. No bays are free."
     : `${free} of ${manager.slots.length} bays are free`;
+}
 
+function renderRecords() {
   const rows = manager.allRecords();
   $("recordsBody").innerHTML = rows.length === 0
-    ? `<tr><td class="empty" colspan="9">No records yet. Park a vehicle with Vehicle Entry and it will appear here.</td></tr>`
+    ? `<tr><td class="empty" colspan="9">No records yet. Park a vehicle from Vehicle Entry and it will appear here.</td></tr>`
     : rows.map(t => `<tr>
         <td>${t.id}</td>
         <td>${esc(t.vehicle.number)}</td>
