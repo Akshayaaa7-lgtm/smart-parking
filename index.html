@@ -1,0 +1,524 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Smart Parking Management System</title>
+<style>
+  :root {
+    --page: #2f2f2f;
+    --page-text: #ece8e0;
+    --paper: #eef2ee;
+    --tan: #b8a58c;
+    --ink: #1c1c1c;
+    --cyan: #8ddee6;
+    --cyan-dark: #66cbd5;
+    --pink: #f8cbc8;
+    --blue: #d6e8fb;
+    --green: #d5edd5;
+    --yellow: #fff3c4;
+    --line: #aaaaaa;
+    --font: Verdana, "DejaVu Sans", Geneva, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { color-scheme: dark; }
+  body {
+    margin: 0;
+    min-height: 100vh;
+    background: var(--page);
+    color: var(--page-text);
+    font-family: var(--font);
+    font-size: 15px;
+    line-height: 1.5;
+  }
+  [hidden] { display: none !important; }
+
+  /* ---------- top bar ---------- */
+  .topbar {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    justify-content: space-between;
+    gap: .75rem 1.5rem;
+    padding: .9rem clamp(1rem, 4vw, 2.5rem);
+    border-bottom: 1px solid #555;
+  }
+  .brand { margin: 0; font-size: 1.15rem; font-weight: 700; letter-spacing: .01em; }
+  .brand small { display: block; font-weight: 400; font-size: .8rem; color: #b9b4a9; }
+  .session { display: flex; align-items: center; gap: .9rem; font-size: .9rem; color: #cfcac0; }
+
+  /* ---------- boxed card (matches the report screenshots) ---------- */
+  .card { background: #fff; border: 1px solid #000; padding: 5px; color: var(--ink); }
+  .card > .inner {
+    background: var(--paper);
+    border: 4px solid var(--tan);
+    padding: 1rem 1.25rem 1.25rem;
+    height: 100%;
+  }
+  .card h2 {
+    margin: 0 0 1rem;
+    padding: .55rem .5rem;
+    text-align: center;
+    font-size: 1.2rem;
+    border: 1px solid var(--line);
+    background: var(--blue);
+  }
+  .card.pink h2   { background: var(--pink); }
+  .card.green h2  { background: var(--green); }
+  .card.yellow h2 { background: var(--yellow); }
+  .card h3 { margin: 1rem 0 .5rem; font-size: .95rem; }
+
+  /* ---------- layout ---------- */
+  .login-wrap { display: grid; place-items: center; padding: clamp(2rem, 10vh, 6rem) 1rem; }
+  .login-wrap .card { width: min(440px, 100%); }
+  .app {
+    display: grid;
+    grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr);
+    gap: 1.5rem;
+    max-width: 1140px;
+    margin: 0 auto;
+    padding: 1.5rem clamp(1rem, 4vw, 2rem) 3rem;
+  }
+  .span-all { grid-column: 1 / -1; }
+  .stack { display: grid; gap: 1.5rem; align-content: start; }
+  @media (max-width: 820px) { .app { grid-template-columns: minmax(0, 1fr); } }
+
+  /* ---------- forms ---------- */
+  .field { display: grid; grid-template-columns: 9.5rem 1fr; align-items: center; gap: .4rem .9rem; margin-bottom: .8rem; }
+  .field label { font-size: .9rem; }
+  input, select {
+    width: 100%;
+    padding: .5rem .55rem;
+    font: inherit;
+    color: var(--ink);
+    background: #fff;
+    border: 1px solid #000;
+    border-radius: 0;
+  }
+  input::placeholder { color: #777; }
+  @media (max-width: 480px) { .field { grid-template-columns: 1fr; } }
+
+  .actions { display: flex; flex-wrap: wrap; justify-content: center; gap: .8rem 2rem; margin-top: 1.1rem; }
+  button {
+    font: inherit;
+    font-weight: 700;
+    color: #000;
+    background: var(--cyan);
+    border: 1px solid #000;
+    border-radius: 0;
+    padding: .5rem 1.6rem;
+    min-width: 6.5rem;
+    cursor: pointer;
+  }
+  button:hover { background: var(--cyan-dark); }
+  button.quiet { background: transparent; color: var(--page-text); border-color: #8a8a8a; padding: .3rem 1rem; min-width: 0; font-weight: 400; }
+  button.quiet:hover { background: #444; }
+  :focus-visible { outline: 3px solid #0b57d0; outline-offset: 2px; }
+  .topbar :focus-visible { outline-color: #8dc2ff; }
+
+  /* ---------- feedback ---------- */
+  .feedback:empty { display: none; }
+  .feedback { margin-top: 1rem; font-size: .9rem; }
+  .msg { padding: .6rem .8rem; border: 1px solid #000; }
+  .msg.error { background: var(--pink); }
+  .msg.ok { background: var(--green); }
+  .ticket {
+    background: #fff;
+    border: 2px dashed #555;
+    padding: .8rem 1rem;
+    margin: 0;
+    font-family: "DejaVu Sans Mono", Consolas, monospace;
+    font-size: .85rem;
+    white-space: pre-wrap;
+  }
+  .ticket b { font-family: var(--font); }
+
+  /* ---------- parking bays ---------- */
+  .summary { margin: 0 0 .25rem; font-weight: 700; text-align: center; }
+  .bays { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: .7rem; }
+  .bay {
+    min-height: 104px;
+    padding: .55rem .4rem;
+    text-align: center;
+    border: 1px solid #000;
+    background: var(--green);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: .25rem;
+  }
+  .bay.taken { background: var(--pink); }
+  .bay .id { font-weight: 700; }
+  .bay .kind { font-size: .8rem; color: #444; }
+  .bay .state { font-size: .85rem; }
+  .plate {
+    background: #fff;
+    border: 2px solid #000;
+    padding: .1rem .5rem;
+    font-family: "DejaVu Sans Mono", Consolas, monospace;
+    font-weight: 700;
+    letter-spacing: .08em;
+    font-size: .85rem;
+    overflow-wrap: anywhere;
+  }
+
+  /* ---------- records table ---------- */
+  .table-scroll { overflow-x: auto; border: 1px solid #000; background: #fff; }
+  table { width: 100%; border-collapse: collapse; font-size: .85rem; min-width: 760px; }
+  th, td { padding: .5rem .6rem; text-align: left; border-bottom: 1px solid #ccc; white-space: nowrap; }
+  th { background: var(--cyan); border-bottom: 1px solid #000; }
+  td.empty { text-align: center; white-space: normal; padding: 1.4rem; color: #444; }
+  .status { padding: .1rem .5rem; border: 1px solid #000; font-size: .8rem; }
+  .status.parked { background: var(--pink); }
+  .status.done { background: var(--green); }
+</style>
+</head>
+<body>
+
+<!-- ============ SCREEN 1 : ADMIN LOGIN ============ -->
+<main id="loginView" class="login-wrap">
+  <section class="card pink" aria-labelledby="loginTitle">
+    <div class="inner">
+      <h2 id="loginTitle">Admin Login</h2>
+      <form id="loginForm" autocomplete="off" novalidate>
+        <div class="field">
+          <label for="username">Username</label>
+          <input id="username" name="username" type="text" autocomplete="username">
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" name="password" type="password" autocomplete="current-password">
+        </div>
+        <div class="actions">
+          <button type="submit">Login</button>
+          <button type="reset" id="loginClear">Clear</button>
+        </div>
+        <div class="feedback" id="loginMsg" role="alert"></div>
+      </form>
+    </div>
+  </section>
+</main>
+
+<!-- ============ DASHBOARD ============ -->
+<div id="appView" hidden>
+  <header class="topbar">
+    <h1 class="brand">Smart Parking Management System<small>Admin console</small></h1>
+    <div class="session">
+      <span>Signed in as admin</span>
+      <button type="button" class="quiet" id="logoutBtn">Log out</button>
+    </div>
+  </header>
+
+  <main class="app">
+    <!-- Available slots -->
+    <section class="card green" aria-labelledby="slotsTitle">
+      <div class="inner">
+        <h2 id="slotsTitle">Available Slots</h2>
+        <p class="summary" id="slotSummary" aria-live="polite"></p>
+        <h3>Car bays</h3>
+        <div class="bays" id="carBays"></div>
+        <h3>Bike bays</h3>
+        <div class="bays" id="bikeBays"></div>
+      </div>
+    </section>
+
+    <div class="stack">
+      <!-- Vehicle entry -->
+      <section class="card" aria-labelledby="entryTitle">
+        <div class="inner">
+          <h2 id="entryTitle">Vehicle Entry</h2>
+          <form id="entryForm" autocomplete="off" novalidate>
+            <div class="field">
+              <label for="vType">Vehicle Type</label>
+              <select id="vType">
+                <option>Car</option>
+                <option>Bike</option>
+              </select>
+            </div>
+            <div class="field">
+              <label for="vNumber">Vehicle Number</label>
+              <input id="vNumber" type="text" placeholder="e.g. KL 09 AB 1234">
+            </div>
+            <div class="field">
+              <label for="vOwner">Owner Name</label>
+              <input id="vOwner" type="text">
+            </div>
+            <div class="actions">
+              <button type="submit">Save</button>
+              <button type="reset" id="entryClear">Clear</button>
+            </div>
+            <div class="feedback" id="entryMsg" aria-live="polite"></div>
+          </form>
+        </div>
+      </section>
+
+      <!-- Vehicle exit -->
+      <section class="card yellow" aria-labelledby="exitTitle">
+        <div class="inner">
+          <h2 id="exitTitle">Vehicle Exit</h2>
+          <form id="exitForm" autocomplete="off" novalidate>
+            <div class="field">
+              <label for="exitNumber">Vehicle Number</label>
+              <input id="exitNumber" type="text">
+            </div>
+            <div class="actions">
+              <button type="submit">Confirm exit</button>
+            </div>
+            <div class="feedback" id="exitMsg" aria-live="polite"></div>
+          </form>
+        </div>
+      </section>
+    </div>
+
+    <!-- Records -->
+    <section class="card green span-all" aria-labelledby="recordsTitle">
+      <div class="inner">
+        <h2 id="recordsTitle">Parking Records</h2>
+        <div class="table-scroll">
+          <table>
+            <thead>
+              <tr>
+                <th>Ticket</th><th>Vehicle No</th><th>Type</th><th>Owner</th>
+                <th>Bay</th><th>Entry time</th><th>Exit time</th><th>Fee (Rs)</th><th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="recordsBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+/* ============================================================
+   MODEL CLASSES  (same OOP design as the Java version)
+   ============================================================ */
+
+// ABSTRACTION: base class
+class Vehicle {
+  constructor(number, owner, type) {
+    if (new.target === Vehicle) throw new Error("Vehicle is abstract");
+    this.number = number;
+    this.owner = owner;
+    this.type = type;
+  }
+}
+// INHERITANCE
+class Car  extends Vehicle { constructor(number, owner) { super(number, owner, "Car");  } }
+class Bike extends Vehicle { constructor(number, owner) { super(number, owner, "Bike"); } }
+
+// ENCAPSULATION: occupied flag is private
+class ParkingSlot {
+  #occupied = false;
+  constructor(id, allowedType) { this.id = id; this.allowedType = allowedType; }
+  get available() { return !this.#occupied; }
+  allocate() { this.#occupied = true; }
+  free()     { this.#occupied = false; }
+}
+
+class ParkingTicket {
+  static counter = 1000;
+  static RATE_PER_HOUR = 20;
+
+  constructor(vehicle, slot) {
+    this.id = ++ParkingTicket.counter;
+    this.vehicle = vehicle;
+    this.slot = slot;
+    this.entryTime = new Date();
+    this.exitTime = null;
+    this.fee = 0;
+  }
+  get closed() { return this.exitTime !== null; }
+
+  close() {
+    this.exitTime = new Date();
+    const hours = Math.max(1, Math.ceil((this.exitTime - this.entryTime) / 3600000));
+    this.fee = hours * ParkingTicket.RATE_PER_HOUR;   // rounded up, minimum 1 hour
+  }
+}
+
+class ParkingException extends Error {}
+
+class ParkingManager {
+  constructor(carSlots, bikeSlots) {
+    this.slots = [];
+    this.active = new Map();   // vehicle number -> ticket
+    this.history = [];
+    let id = 1;
+    for (let i = 0; i < carSlots; i++)  this.slots.push(new ParkingSlot(id++, "Car"));
+    for (let i = 0; i < bikeSlots; i++) this.slots.push(new ParkingSlot(id++, "Bike"));
+  }
+
+  vehicleEntry(vehicle) {
+    if (this.active.has(vehicle.number))
+      throw new ParkingException(`Vehicle ${vehicle.number} is already parked.`);
+    const slot = this.slots.find(s => s.allowedType === vehicle.type && s.available);
+    if (!slot)
+      throw new ParkingException(`No ${vehicle.type.toLowerCase()} bays are free right now.`);
+    slot.allocate();
+    const ticket = new ParkingTicket(vehicle, slot);
+    this.active.set(vehicle.number, ticket);
+    return ticket;
+  }
+
+  vehicleExit(number) {
+    const ticket = this.active.get(number);
+    if (!ticket)
+      throw new ParkingException(`No parked vehicle found with number ${number}.`);
+    ticket.close();
+    ticket.slot.free();
+    this.active.delete(number);
+    this.history.push(ticket);
+    return ticket;
+  }
+
+  occupantOf(slot) {
+    for (const t of this.active.values()) if (t.slot === slot) return t.vehicle.number;
+    return null;
+  }
+
+  allRecords() {
+    const current = [...this.active.values()].sort((a, b) => a.id - b.id);
+    return [...current, ...this.history];
+  }
+}
+
+class Admin {
+  constructor(username, password) { this.username = username; this.password = password; }
+  login(u, p) { return u === this.username && p === this.password; }
+}
+
+/* ============================================================
+   UI
+   ============================================================ */
+const admin = new Admin("admin", "admin123");
+const manager = new ParkingManager(3, 3);   // 3 car bays, 3 bike bays
+
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"']/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;", "'":"&#39;" }[c]));
+const fmt = d => d.toLocaleString("en-GB", { day:"2-digit", month:"short", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+const normalise = s => s.trim().replace(/\s+/g, " ").toUpperCase();
+
+function showMessage(el, kind, html) {
+  el.innerHTML = `<div class="msg ${kind}">${html}</div>`;
+}
+
+/* ---------- login / logout ---------- */
+$("loginForm").addEventListener("submit", e => {
+  e.preventDefault();
+  if (admin.login($("username").value.trim(), $("password").value)) {
+    $("loginMsg").innerHTML = "";
+    $("loginForm").reset();
+    $("loginView").hidden = true;
+    $("appView").hidden = false;
+    render();
+    $("vNumber").focus();
+  } else {
+    showMessage($("loginMsg"), "error", "Wrong username or password. Check both and try again.");
+    $("password").value = "";
+    $("password").focus();
+  }
+});
+$("loginClear").addEventListener("click", () => { $("loginMsg").innerHTML = ""; });
+
+$("logoutBtn").addEventListener("click", () => {
+  $("appView").hidden = true;
+  $("loginView").hidden = false;
+  ["entryMsg", "exitMsg"].forEach(id => $(id).innerHTML = "");
+  $("username").focus();
+});
+
+/* ---------- vehicle entry ---------- */
+$("entryForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const number = normalise($("vNumber").value);
+  const owner = $("vOwner").value.trim();
+  const type = $("vType").value;
+  const out = $("entryMsg");
+
+  if (!number || !owner) {
+    showMessage(out, "error", "Enter both the vehicle number and the owner name.");
+    return;
+  }
+  const vehicle = type === "Car" ? new Car(number, owner) : new Bike(number, owner);
+  try {
+    const t = manager.vehicleEntry(vehicle);
+    out.innerHTML = `<pre class="ticket"><b>Parking ticket</b>\n`
+      + `Ticket ID   : ${t.id}\n`
+      + `Vehicle No  : ${esc(t.vehicle.number)}\n`
+      + `Type        : ${t.vehicle.type}\n`
+      + `Owner       : ${esc(t.vehicle.owner)}\n`
+      + `Bay         : ${t.slot.id}\n`
+      + `Entry time  : ${fmt(t.entryTime)}</pre>`;
+    $("entryForm").reset();
+    render();
+    $("vNumber").focus();
+  } catch (err) {
+    showMessage(out, "error", esc(err.message));
+  }
+});
+$("entryClear").addEventListener("click", () => { $("entryMsg").innerHTML = ""; });
+
+/* ---------- vehicle exit ---------- */
+$("exitForm").addEventListener("submit", e => {
+  e.preventDefault();
+  const number = normalise($("exitNumber").value);
+  const out = $("exitMsg");
+  if (!number) {
+    showMessage(out, "error", "Enter the vehicle number that is leaving.");
+    return;
+  }
+  try {
+    const t = manager.vehicleExit(number);
+    showMessage(out, "ok",
+      `<b>${esc(number)}</b> has left. Bay ${t.slot.id} is free again.<br>Fee to pay: <b>Rs. ${t.fee}</b>`);
+    $("exitForm").reset();
+    render();
+  } catch (err) {
+    showMessage(out, "error", esc(err.message));
+  }
+});
+
+/* ---------- rendering ---------- */
+function bayHTML(slot) {
+  const plate = manager.occupantOf(slot);
+  return `<div class="bay ${plate ? "taken" : ""}">
+      <span class="id">Bay ${slot.id}</span>
+      <span class="kind">${slot.allowedType}</span>
+      ${plate ? `<span class="plate">${esc(plate)}</span>` : `<span class="state">Free</span>`}
+    </div>`;
+}
+
+function render() {
+  const car = manager.slots.filter(s => s.allowedType === "Car");
+  const bike = manager.slots.filter(s => s.allowedType === "Bike");
+  $("carBays").innerHTML = car.map(bayHTML).join("");
+  $("bikeBays").innerHTML = bike.map(bayHTML).join("");
+
+  const free = manager.slots.filter(s => s.available).length;
+  $("slotSummary").textContent = free === 0
+    ? "Parking is full. No bays are free."
+    : `${free} of ${manager.slots.length} bays are free`;
+
+  const rows = manager.allRecords();
+  $("recordsBody").innerHTML = rows.length === 0
+    ? `<tr><td class="empty" colspan="9">No records yet. Park a vehicle with Vehicle Entry and it will appear here.</td></tr>`
+    : rows.map(t => `<tr>
+        <td>${t.id}</td>
+        <td>${esc(t.vehicle.number)}</td>
+        <td>${t.vehicle.type}</td>
+        <td>${esc(t.vehicle.owner)}</td>
+        <td>${t.slot.id}</td>
+        <td>${fmt(t.entryTime)}</td>
+        <td>${t.closed ? fmt(t.exitTime) : "-"}</td>
+        <td>${t.closed ? t.fee : "-"}</td>
+        <td><span class="status ${t.closed ? "done" : "parked"}">${t.closed ? "Completed" : "Parked"}</span></td>
+      </tr>`).join("");
+}
+
+$("username").focus();
+</script>
+</body>
+</html>
